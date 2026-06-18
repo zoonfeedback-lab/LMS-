@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Batch {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  coverImage  String?
+  isLive      Boolean      @default(false)
+  liveRoomId  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  isUpcoming  Boolean      @default(false)
+  price       String       @default("Free")
+  startDate   String?
+  lectures    Lecture[]
+  enrollments Enrollment[]
+}
+
+model Lecture {
+  id          String            @id @default(uuid())
+  batchId     String
+  title       String
+  description String?
+  videoUrl    String?
+  notesUrl    String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  batch       Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  progress    LectureProgress[]
+}
+
+model User {
+  id             String             @id @default(uuid())
+  name           String             @unique
+  password       String             @default("password")
+  role           String             @default("student")
+  title          String             @default("Student")
+  avatarUrl      String             @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80")
+  gpa            String             @default("N/A")
+  attendance     String             @default("100%")
+  certificates   String             @default("0")
+  enrollmentDate String             @default("Pending Approval")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  enrollments    Enrollment[]
+  progress       LectureProgress[]
+  activities     TimelineActivity[]
+
+  // Admission Form Fields
+  fatherName     String?
+  cnic           String?
+  dateOfBirth    String?
+  gender         String?            // "Male" | "Female"
+  whatsapp       String?
+  email          String?            @unique
+  postalAddress  String?
+  lastQual       String?
+  passingYear    String?
+  institute      String?
+  emergencyName  String?
+  emergencyRel   String?
+  emergencyPhone String?
+  classMode      String?            // "Physical" | "Online"
+  status         String?            @default("Pending") // "Active" | "Pending" | "Completed" | "Dropped"
+
+  // Office Use Only Fields
+  admissionFee   String?
+  discount       String?
+  netPayable     String?
+  admissionDate  String?
+  paymentMethod  String?            // "Cash" | "Bank" | "Online"
+  remarks        String?
+  docsReceived   String?            // comma-separated list of documents: e.g. "CNIC,Photograph"
+}
+
+model Enrollment {
+  id                      String    @id @default(uuid())
+  userId                  String
+  batchId                 String
+  enrolledAt              DateTime  @default(now())
+  recordedAccessExpiresAt DateTime? // The date when their 2-month recorded access expires
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch                   Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, batchId])
+}
+
+model LectureProgress {
+  id          String   @id @default(uuid())
+  userId      String
+  lectureId   String
+  completed   Boolean  @default(true)
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lecture     Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lectureId])
+}
+
+model TimelineActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // "enroll" | "watch" | "badge"
+  title     String
+  subtitle  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

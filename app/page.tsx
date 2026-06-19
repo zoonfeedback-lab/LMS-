@@ -1283,6 +1283,7 @@ export default function HomePage() {
                     <GraduationCap className="w-6 h-6" />
                   </div>
                   <h4 className="text-xl font-bold text-slate-800">Welcome Back</h4>
+                  <button onClick={() => {setShowSignInModal(false)}}><span style={{color: "red"}}>Close Modal</span></button>
                   <p className="text-xs text-slate-400 mt-1">Access your school dashboard and live classrooms.</p>
                 </div>
               ) : (
@@ -1294,6 +1295,7 @@ export default function HomePage() {
                     <div>
                       <h4 className="text-base font-extrabold text-[#523cf8] tracking-tight uppercase leading-none block">Premier Tax Corporate & Accounting School</h4>
                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-widest font-mono">Admission & Enrollment Form</p>
+                      <button onClick={() => {setShowSignInModal(false)}}><span style={{color: "red"}}>Close Modal</span></button>
                     </div>
                   </div>
                   

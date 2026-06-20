@@ -1,6 +1,6 @@
 // app/api/batches/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 // CREATE BATCH
 export async function POST(req: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const batch = await prisma.batch.create({
+    const batch = await db.batch.create({
       data: {
         title,
         description,
@@ -41,13 +41,12 @@ export async function POST(req: NextRequest) {
 // GET ALL BATCHES
 export async function GET() {
   try {
-    const batches = await prisma.batch.findMany({
-      orderBy: { createdAt: "desc" },
+    const batches = await db.batch.findMany({
+      orderBy: { startDate: "desc" },
       include: {
         _count: {
           select: {
             enrollments: true,
-            requests: true,
             liveClasses: true,
           },
         },

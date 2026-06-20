@@ -103,7 +103,9 @@ export default function HomePage() {
   const [regEmergencyPhone, setRegEmergencyPhone] = useState('');
   const [regClassMode, setRegClassMode] = useState('Online');
   const [regDeclaration, setRegDeclaration] = useState(false);
+  const [regBatchName, setRegBatchName] = useState('');
   const [regError, setRegError] = useState<string | null>(null);
+  const [admissionsError, setAdmissionsError] = useState<string | null>(null);
   const [regSuccess, setRegSuccess] = useState(false);
   const [registeredStudentId, setRegisteredStudentId] = useState('');
 
@@ -307,6 +309,26 @@ export default function HomePage() {
     }
 
     try {
+      let selectedBatchName = '';
+      const desiredRaw = regDesiredCourseId ? regDesiredCourseId.trim() : '';
+      // If the user entered an id that matches a batch id
+      const byId = batches.find((batch) => batch.id === desiredRaw);
+      if (byId) {
+        selectedBatchName = byId.title;
+      } else {
+        // Try to match by course title substring
+        const lower = desiredRaw.toLowerCase();
+        const byTitle = batches.find((batch) => lower.includes(batch.title.toLowerCase()));
+        if (byTitle) {
+          selectedBatchName = byTitle.title;
+        } else {
+          // Fallback: take the first comma-separated token as the batch name
+          selectedBatchName = desiredRaw.split(',')[0].trim();
+        }
+      }
+
+      const batchNameToSend = regBatchName || selectedBatchName;
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -324,10 +346,12 @@ export default function HomePage() {
           passingYear: regPassingYear.trim(),
           institute: regInstitute.trim(),
           desiredCourseId: regDesiredCourseId,
+          batchName: batchNameToSend,
           emergencyName: regEmergencyName.trim(),
           emergencyRel: regEmergencyRel.trim(),
           emergencyPhone: regEmergencyPhone.trim(),
           classMode: regClassMode,
+          selectedCourses: regDesiredCourseId,
         }),
       });
 
@@ -575,6 +599,14 @@ export default function HomePage() {
                 >
                   Log In
                 </button>
+
+                <button
+                  onClick={() => { setAuthMode('register'); setShowSignInModal(true); }}
+                  className="text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-[#523cf8]/20 text-[#523cf8] bg-white hover:bg-[#f8f6ff] transition-all"
+                >
+                  Apply for Admission
+                </button>
+
                 <button
                   onClick={() => setShowSignInModal(true)}
                   className="text-xs font-bold px-4 py-2 rounded-full bg-[#523cf8] hover:bg-[#4330d9] text-white shadow-sm shadow-[#523cf8]/10 hover:shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
@@ -1412,15 +1444,14 @@ export default function HomePage() {
                 </form>
               )}
 
-              {/* Register Form (Admission Form Multi-step) */}
+            
               {authMode === 'register' && (
                 <form onSubmit={handleRegisterSubmit} className="space-y-5">
-                  
-                  {/* Step 1: Personal & Contact Information */}
-                  {registerStep === 1 && (
-                    <div className="space-y-4 fade-in">
+                  <div className="max-h-[60vh] overflow-y-auto pr-3 space-y-6">
+                    
+                    <section className="space-y-4">
                       <span className="text-xs font-extrabold uppercase text-[#523cf8] tracking-widest font-mono block">1. Personal & Contact Info</span>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Full Name (BLOCK LETTERS) *</label>
@@ -1433,6 +1464,7 @@ export default function HomePage() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition"
                           />
                         </div>
+
                         <div>
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Father’s/Guardian Name *</label>
                           <input
@@ -1458,6 +1490,7 @@ export default function HomePage() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition"
                           />
                         </div>
+
                         <div>
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Date of Birth *</label>
                           <input
@@ -1468,6 +1501,7 @@ export default function HomePage() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition"
                           />
                         </div>
+
                         <div>
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Gender *</label>
                           <select
@@ -1493,6 +1527,7 @@ export default function HomePage() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition"
                           />
                         </div>
+
                         <div>
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Email Address *</label>
                           <input
@@ -1517,31 +1552,11 @@ export default function HomePage() {
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition"
                         />
                       </div>
+                    </section>
 
-                      <div className="pt-2 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (regName.trim() && regFatherName.trim() && regCnic.trim() && regDob.trim() && regWhatsapp.trim() && regEmail.trim() && regPostalAddress.trim()) {
-                              setRegisterStep(2);
-                              setRegError(null);
-                            } else {
-                              setRegError('Please fill in all required fields in this step');
-                            }
-                          }}
-                          className="px-6 py-2.5 rounded-xl bg-[#523cf8] hover:bg-[#4330d9] text-white font-bold text-xs shadow-md shadow-[#523cf8]/15 hover:shadow-indigo-500/20 active:scale-95 transition"
-                        >
-                          Next: Academic background
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 2: Academic Background */}
-                  {registerStep === 2 && (
-                    <div className="space-y-4 fade-in">
+                    
+                    <section className="space-y-4">
                       <span className="text-xs font-extrabold uppercase text-[#523cf8] tracking-widest font-mono block">2. Academic Background</span>
-                      
                       <div>
                         <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Last Qualification *</label>
                         <input
@@ -1578,114 +1593,50 @@ export default function HomePage() {
                           />
                         </div>
                       </div>
+                    </section>
 
-                      <div className="pt-2 flex justify-between">
-                        <button
-                          type="button"
-                          onClick={() => setRegisterStep(1)}
-                          className="px-6 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 font-bold text-xs transition active:scale-95"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (regLastQual.trim() && regInstitute.trim() && regPassingYear.trim()) {
-                              setRegisterStep(3);
-                              setRegError(null);
-                            } else {
-                              setRegError('Please fill in all academic details');
-                            }
-                          }}
-                          className="px-6 py-2.5 rounded-xl bg-[#523cf8] hover:bg-[#4330d9] text-white font-bold text-xs shadow-md shadow-[#523cf8]/15 hover:shadow-indigo-500/20 active:scale-95 transition"
-                        >
-                          Next: Course Selection
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 3: Course Selection */}
-                  {registerStep === 3 && (
-                    <div className="space-y-4 fade-in">
+                   
+                    <section className="space-y-4">
                       <span className="text-xs font-extrabold uppercase text-[#523cf8] tracking-widest font-mono block">3. Course Enrollment</span>
-                      
+
                       <div>
-                        <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Tick the Desired Course *</label>
-                        <select
+                        <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Desired Course(s) (comma-separated) *</label>
+                        <textarea
                           value={regDesiredCourseId}
                           onChange={(e) => setRegDesiredCourseId(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-[#523cf8] cursor-pointer"
-                        >
-                          {batches.map((batch) => (
-                            <option key={batch.id} value={batch.id}>
-                              {batch.title} ({batch.price})
-                            </option>
-                          ))}
-                          {batches.length === 0 && <option value="">No courses available</option>}
-                        </select>
-                      </div>
+                          placeholder="e.g. Full-Stack Web Architect, AI & ML Foundations"
+                          rows={3}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition resize-vertical"
+                        />
+                        {batches.length > 0 && (
+                          <p className="text-[10px] text-slate-400 mt-2">Available courses: {batches.map((b) => b.title).join(', ')}</p>
+                        )}
 
-                      <div>
-                        <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Class Mode *</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setRegClassMode('Online')}
-                            className={`py-3 rounded-xl border text-xs font-bold transition-all ${
-                              regClassMode === 'Online'
-                                ? 'bg-indigo-50 border-[#523cf8] text-[#523cf8]'
-                                : 'border-slate-200 hover:bg-slate-50 text-slate-500'
-                            }`}
+                        <div className="mt-3">
+                          <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Batch Type</label>
+                          <select
+                            value={regBatchName}
+                            onChange={(e) => setRegBatchName(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] cursor-pointer"
                           >
-                            Online Class
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRegClassMode('Physical')}
-                            className={`py-3 rounded-xl border text-xs font-bold transition-all ${
-                              regClassMode === 'Physical'
-                                ? 'bg-indigo-50 border-[#523cf8] text-[#523cf8]'
-                                : 'border-slate-200 hover:bg-slate-50 text-slate-500'
-                            }`}
-                          >
-                            Physical Class
-                          </button>
+                            <option value="">Auto-detect / Select batch</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Fall">Fall</option>
+                            <option value="Winter">Winter</option>
+                            <option value="Spring">Spring</option>
+                            <option value="Other">Other</option>
+                          </select>
                         </div>
                       </div>
 
-                      <div className="pt-2 flex justify-between">
-                        <button
-                          type="button"
-                          onClick={() => setRegisterStep(2)}
-                          className="px-6 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 font-bold text-xs transition active:scale-95"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (regDesiredCourseId) {
-                              setRegisterStep(4);
-                              setRegError(null);
-                            } else {
-                              setRegError('Please select a course to register');
-                            }
-                          }}
-                          className="px-6 py-2.5 rounded-xl bg-[#523cf8] hover:bg-[#4330d9] text-white font-bold text-xs shadow-md shadow-[#523cf8]/15 hover:shadow-indigo-500/20 active:scale-95 transition"
-                        >
-                          Next: Emergency & Declaration
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    
+                    </section>
 
-                  {/* Step 4: Emergency Contact & Declaration */}
-                  {registerStep === 4 && (
-                    <div className="space-y-4 fade-in">
+                   
+                    <section className="space-y-4 pb-4 border-b border-slate-100">
                       <span className="text-xs font-extrabold uppercase text-[#523cf8] tracking-widest font-mono block">4. Emergency Contact & Declaration</span>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 pb-4">
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-1">
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Contact Name *</label>
                           <input
@@ -1697,6 +1648,7 @@ export default function HomePage() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition"
                           />
                         </div>
+
                         <div>
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Relation *</label>
                           <input
@@ -1708,6 +1660,7 @@ export default function HomePage() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold focus:outline-none focus:border-[#523cf8] focus:bg-white transition"
                           />
                         </div>
+
                         <div>
                           <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1.5">Contact Number *</label>
                           <input
@@ -1745,40 +1698,35 @@ export default function HomePage() {
                           <strong>DECLARATION:</strong> I hereby declare that the information provided above is correct to the best of my knowledge and I agree to abide by the rules and regulations of the academy.
                         </label>
                       </div>
+                    </section>
+                  </div>
 
-                      <div className="pt-2 flex justify-between">
-                        <button
-                          type="button"
-                          onClick={() => setRegisterStep(3)}
-                          className="px-6 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 font-bold text-xs transition active:scale-95"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={regSuccess}
-                          className="px-8 py-2.5 rounded-xl bg-[#523cf8] hover:bg-[#4330d9] text-white font-bold text-xs shadow-md shadow-[#523cf8]/15 hover:shadow-indigo-500/20 active:scale-95 transition"
-                        >
-                          {regSuccess ? 'Submitting...' : 'Submit Admission Form'}
-                        </button>
-                      </div>
+                  <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-between items-center">
+                    <div className="w-full sm:w-auto">
+                      {admissionsError && (
+                        <div className="text-xs p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 font-semibold">{admissionsError}</div>
+                      )}
+                      {regSuccess && (
+                        <div className="text-xs p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 font-semibold flex items-center gap-2">✓ Admission received</div>
+                      )}
                     </div>
-                  )}
 
-                  <div className="text-center pt-4 border-t border-slate-100">
-                    <p className="text-xs text-slate-400 font-medium">
-                      Already have an account?{' '}
+                    <div className="flex gap-3 w-full sm:w-auto">
                       <button
                         type="button"
-                        onClick={() => {
-                          setAuthMode('login');
-                          setSignInError(null);
-                        }}
-                        className="text-[#523cf8] font-bold hover:underline"
+                        onClick={() => setAuthMode('login')}
+                        className="px-4 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-xl transition w-full sm:w-auto"
                       >
-                        Log In
+                        Back to Login
                       </button>
-                    </p>
+                      <button
+                        type="submit"
+                        disabled={regSuccess}
+                        className="px-6 py-3 rounded-xl bg-[#523cf8] hover:bg-[#4330d9] text-white font-bold text-xs shadow-md shadow-[#523cf8]/15 transition w-full sm:w-auto"
+                      >
+                        {regSuccess ? 'Submitting...' : 'Submit Admission Form'}
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}

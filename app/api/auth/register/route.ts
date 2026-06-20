@@ -18,13 +18,17 @@ export async function POST(req: NextRequest) {
       passingYear,
       institute,
       desiredCourseId,
+      batchName,
       emergencyName,
       emergencyRel,
       emergencyPhone,
       classMode,
+      selectedCourses,
     } = body;
 
-    if (!name || !password || !desiredCourseId || !email) {
+    const selectedCourseId = desiredCourseId || (typeof selectedCourses === 'string' ? selectedCourses : '');
+
+    if (!name || !password || !selectedCourseId || !email) {
       return NextResponse.json(
         { error: 'Missing name, email, password, or course selection' },
         { status: 400 }
@@ -57,22 +61,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Store UI registration metadata serialized inside selectedCourses
-    const meta = {
-      selectedCourses: desiredCourseId,
-      classMode: classMode || 'Online',
-      admissionFee: '',
-      discount: '',
-      netPayable: '',
-      admissionDate: '',
-      paymentMethod: 'Cash',
-      remarks: '',
-      docsReceived: '',
-      gpa: '3.8',
-      attendance: '94%',
-      certificates: '5',
-      recordedAccessExpiresAt: null,
-    };
+    const normalizedBatchName = typeof batchName === 'string' ? batchName.trim() : '';
 
     // Create the AdminRequest
     const request = await db.adminRequest.create({
@@ -92,9 +81,9 @@ export async function POST(req: NextRequest) {
         emergencyName,
         emergencyRel,
         emergencyPhone,
-        batchId: desiredCourseId,
+        batchName: normalizedBatchName,
         status: 'Pending',
-        selectedCourses: JSON.stringify(meta),
+        selectedCourses: selectedCourseId,
       },
     });
 

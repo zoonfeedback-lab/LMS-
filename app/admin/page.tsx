@@ -226,22 +226,34 @@ export default function AdminDashboard() {
     const targetStatus = forceStatus || editStatus;
 
     try {
+      const selectedCourseId = editDesiredCourseId || selectedAdmission?.enrollments?.[0]?.batchId || '';
+      const admissionPayload = {
+        userId: selectedAdmission.id,
+        status: targetStatus,
+        desiredCourseId: selectedCourseId,
+        name: selectedAdmission.name || '',
+        email: selectedAdmission.email || '',
+        password: selectedAdmission.password || '',
+        fatherName: selectedAdmission.fatherName || '',
+        cnic: selectedAdmission.cnic || '',
+        dateOfBirth: selectedAdmission.dateOfBirth || '',
+        gender: selectedAdmission.gender || '',
+        whatsapp: selectedAdmission.whatsapp || '',
+        postalAddress: selectedAdmission.postalAddress || '',
+        lastQual: selectedAdmission.lastQual || '',
+        passingYear: selectedAdmission.passingYear || '',
+        institute: selectedAdmission.institute || '',
+        emergencyName: selectedAdmission.emergencyName || '',
+        emergencyRel: selectedAdmission.emergencyRel || '',
+        emergencyPhone: selectedAdmission.emergencyPhone || '',
+        batchName: selectedAdmission.batchName || selectedAdmission?.enrollments?.[0]?.batch?.title || '',
+        selectedCourses: selectedCourseId,
+      };
+
       const res = await fetch('/api/admin/admissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: selectedAdmission.id,
-          status: targetStatus,
-          classMode: editClassMode,
-          admissionFee: editAdmissionFee,
-          discount: editDiscount,
-          netPayable: editNetPayable,
-          admissionDate: editAdmissionDate,
-          paymentMethod: editPaymentMethod,
-          remarks: editRemarks,
-          docsReceived: editDocsReceived.join(','),
-          desiredCourseId: editDesiredCourseId,
-        }),
+        body: JSON.stringify(admissionPayload),
       });
 
       const data = await res.json();

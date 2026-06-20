@@ -33,36 +33,34 @@ model Course {
 
 
 model AdminRequest {
-  id             String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  name           String
-  email          String
-  
+  name  String
+  email String
+  password String?
 
-  fatherName     String?
-  cnic           String?
-  dateOfBirth    String?
-  gender         String?
+  fatherName    String?
+  cnic          String?
+  dateOfBirth   String?
+  gender        String?
 
-  whatsapp       String?
-  postalAddress  String?
+  whatsapp      String?
+  postalAddress String?
 
-  lastQual       String?
-  passingYear    String?
-  institute      String?
+  lastQual    String?
+  passingYear String?
+  institute   String?
 
   emergencyName  String?
   emergencyRel   String?
   emergencyPhone String?
 
-  batchName        String
+  batchName String?
 
-  selectedCourses  String // JSON string or comma separated ids
+  selectedCourses String // JSON string or comma separated ids
 
-  status         String @default("pending")
-
-  createdAt      DateTime @default(now())
-
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
 }
 
 

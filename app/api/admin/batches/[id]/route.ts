@@ -1,18 +1,15 @@
 // app/api/batches/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 // GET SINGLE BATCH
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
+  const { params } = context || {};
   try {
-    const batch = await prisma.batch.findUnique({
-      where: { id: params.id },
+    const batch = await db.batch.findUnique({
+      where: { id: params?.id },
       include: {
         enrollments: true,
-        requests: true,
         liveClasses: true,
       },
     });
@@ -34,15 +31,13 @@ export async function GET(
 }
 
 // UPDATE BATCH
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: NextRequest, context: any) {
+  const { params } = context || {};
   try {
     const data = await req.json();
 
-    const updatedBatch = await prisma.batch.update({
-      where: { id: params.id },
+    const updatedBatch = await db.batch.update({
+      where: { id: params?.id },
       data: {
         title: data.title,
         description: data.description,
@@ -66,13 +61,11 @@ export async function PATCH(
 }
 
 // DELETE BATCH
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, context: any) {
+  const { params } = context || {};
   try {
-    await prisma.batch.delete({
-      where: { id: params.id },
+    await db.batch.delete({
+      where: { id: params?.id },
     });
 
     return NextResponse.json({

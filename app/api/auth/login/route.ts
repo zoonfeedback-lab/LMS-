@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
+  console.log("login route hit");
   try {
+
     const { name, password } = await req.json();
 
     if (!name || !password) {
@@ -21,16 +23,16 @@ export async function POST(req: NextRequest) {
       await db.user.create({
         data: {
           name: 'admin',
+          email: 'admin@eduflow.com',
           password: 'admin',
           role: 'instructor',
-          title: 'Principal Administration Lead',
-          avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         },
       });
     }
 
     const identifier = name.trim();
 
+    // Find the user by name or email
     const user = await db.user.findFirst({
       where: {
         OR: [
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest) {
           { name: identifier.toUpperCase() },
           { email: identifier.toLowerCase() },
         ],
-      },
+      },  
     });
 
     if (!user || user.password !== password) {
@@ -48,11 +50,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+   
+
     return NextResponse.json({
       id: user.id,
       name: user.name,
       role: user.role,
-      status: user.status,
+     
     });
   } catch (error) {
     console.error('Login error:', error);

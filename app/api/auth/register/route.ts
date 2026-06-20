@@ -24,60 +24,67 @@ export async function POST(req: NextRequest) {
       classMode,
     } = body;
 
-    if (!name || !password || !desiredCourseId) {
+    if (!name || !password || !desiredCourseId || !email) {
       return NextResponse.json(
-        { error: 'Missing name, password, or course selection' },
+        { error: 'Missing name, email, password, or course selection' },
         { status: 400 }
       );
     }
 
-    // Check if username already exists
+    const cleanedEmail = email.trim().toLowerCase();
+
+    // Check if email already exists in User table
     const existingUser = await db.user.findUnique({
-      where: { name },
+      where: { email: cleanedEmail },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'A user with this name already exists. Please use a unique name or contact administration.' },
+        { error: 'A user with this email address already exists. Please use a unique email or log in.' },
         { status: 400 }
       );
     }
 
-    // Check if email already exists (emails are case-insensitive and stored lowercased)
-    const cleanedEmail = email ? email.trim().toLowerCase() : undefined;
-    if (cleanedEmail) {
-      const existingEmail = await db.user.findUnique({
-        where: { email: cleanedEmail },
-      });
+    // Check if email already exists in AdminRequest table
+    const existingRequest = await db.adminRequest.findFirst({
+      where: { email: cleanedEmail },
+    });
 
-      if (existingEmail) {
-        return NextResponse.json(
-          { error: 'A user with this email address already exists. Please use a unique email or log in.' },
-          { status: 400 }
-        );
-      }
+    if (existingRequest) {
+      return NextResponse.json(
+        { error: 'An admission request with this email already exists. Please wait for approval or log in.' },
+        { status: 400 }
+      );
     }
 
-    // Create the User in database
-    const user = await db.user.create({
+    // Store UI registration metadata serialized inside selectedCourses
+    const meta = {
+      selectedCourses: desiredCourseId,
+      classMode: classMode || 'Online',
+      admissionFee: '',
+      discount: '',
+      netPayable: '',
+      admissionDate: '',
+      paymentMethod: 'Cash',
+      remarks: '',
+      docsReceived: '',
+      gpa: '3.8',
+      attendance: '94%',
+      certificates: '5',
+      recordedAccessExpiresAt: null,
+    };
+
+    // Create the AdminRequest
+    const request = await db.adminRequest.create({
       data: {
         name,
+        email: cleanedEmail,
         password,
-        role: 'student',
-        title: 'Pending Admission',
-        avatarUrl: gender === 'Female' 
-          ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80'
-          : 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80',
-        gpa: 'N/A',
-        attendance: '100%',
-        certificates: '0',
-        enrollmentDate: 'Pending Approval',
         fatherName,
         cnic,
         dateOfBirth,
         gender,
         whatsapp,
-        email: cleanedEmail || null,
         postalAddress,
         lastQual,
         passingYear,
@@ -85,36 +92,19 @@ export async function POST(req: NextRequest) {
         emergencyName,
         emergencyRel,
         emergencyPhone,
-        classMode,
-        status: 'Pending',
-      },
-    });
-
-    // Create the Enrollment in the chosen batch (course)
-    await db.enrollment.create({
-      data: {
-        userId: user.id,
         batchId: desiredCourseId,
-      },
-    });
-
-    // Create a timeline activity
-    await db.timelineActivity.create({
-      data: {
-        userId: user.id,
-        type: 'enroll',
-        title: 'Submitted Admission Form',
-        subtitle: `Applied for enrollment`,
+        status: 'Pending',
+        selectedCourses: JSON.stringify(meta),
       },
     });
 
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        status: user.status,
+        id: request.id,
+        name: request.name,
+        role: 'student',
+        status: 'Pending',
       },
     });
   } catch (error) {

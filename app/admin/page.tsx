@@ -290,19 +290,20 @@ export default function AdminDashboard() {
   const fetchBatches = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/batches');
+      const res = await fetch('/api/admin/Batches');
       const data = await res.json();
-      if (res.ok) {
-        setBatches(data);
-        if (data.length > 0) {
+      if (res.ok && data.success) {
+        const batchList = data.batches || [];
+        setBatches(batchList);
+        if (batchList.length > 0) {
           if (!selectedBatchId) {
-            setSelectedBatchId(data[0].id);
+            setSelectedBatchId(batchList[0].id);
           }
           if (!selectedDetailBatchId) {
-            setSelectedDetailBatchId(data[0].id);
+            setSelectedDetailBatchId(batchList[0].id);
           }
           if (!liveSelectedBatchId) {
-            setLiveSelectedBatchId(data[0].id);
+            setLiveSelectedBatchId(batchList[0].id);
           }
         }
       }
@@ -340,22 +341,21 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch('/api/batches', {
+      const res = await fetch('/api/admin/Batches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: batchTitle.trim(),
           description: batchDescription.trim() || undefined,
-          coverImage: batchCoverImage.trim() || undefined,
-          isUpcoming: batchIsUpcoming,
-          price: batchPrice.trim() || 'Free',
+          duration: batchPrice.trim() || 'Free',
           startDate: batchIsUpcoming ? (batchStartDate.trim() || undefined) : undefined,
+          status: batchIsUpcoming ? 'upcoming' : 'active',
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to create batch');
+        throw new Error(data.message || data.error || 'Failed to create batch');
       }
 
       setBatchSuccess(true);
@@ -395,7 +395,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const res = await fetch(`/api/batches/${selectedBatchId}/lectures`, {
+      const res = await fetch(`/api/admin/Batches/${selectedBatchId}/lectures`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to add lecture');
+        throw new Error(data.message || data.error || 'Failed to add lecture');
       }
 
       setLectureSuccess(true);
@@ -436,7 +436,7 @@ export default function AdminDashboard() {
     setActionLoading(batchId);
 
     try {
-      const res = await fetch(`/api/batches/${batchId}/live`, {
+      const res = await fetch(`/api/admin/Batches/${batchId}/live`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isLive: nextState }),
@@ -444,7 +444,7 @@ export default function AdminDashboard() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to toggle live state');
+        throw new Error(data.message || data.error || 'Failed to toggle live state');
       }
 
       // Update local state directly
@@ -490,22 +490,22 @@ export default function AdminDashboard() {
       const scheduledStartString = `${liveScheduledDate} at ${liveScheduledTime}`;
 
       // Update the Batch metadata to show it is upcoming with start date
-      const resBatch = await fetch(`/api/batches/${liveSelectedBatchId}`, {
+      const resBatch = await fetch(`/api/admin/Batches/${liveSelectedBatchId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          isUpcoming: true,
+          status: 'upcoming',
           startDate: scheduledStartString,
         }),
       });
 
       if (!resBatch.ok) {
         const data = await resBatch.json();
-        throw new Error(data.error || 'Failed to update batch schedule');
+        throw new Error(data.message || data.error || 'Failed to update batch schedule');
       }
 
       // Also publish a scheduled lecture item in the database
-      const resLecture = await fetch(`/api/batches/${liveSelectedBatchId}/lectures`, {
+      const resLecture = await fetch(`/api/admin/Batches/${liveSelectedBatchId}/lectures`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -516,7 +516,7 @@ export default function AdminDashboard() {
 
       if (!resLecture.ok) {
         const data = await resLecture.json();
-        throw new Error(data.error || 'Failed to publish live session materials');
+        throw new Error(data.message || data.error || 'Failed to publish live session materials');
       }
 
       setLiveModalSuccess(true);
@@ -546,23 +546,46 @@ export default function AdminDashboard() {
     setActionLoading(batchId);
 
     try {
-      const res = await fetch(`/api/batches/${batchId}`, {
+      const res = await fetch(`/api/admin/Batches/${batchId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          isUpcoming: false,
+          status: 'active',
           startDate: null,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to cancel session');
+        throw new Error(data.message || data.error || 'Failed to cancel session');
       }
 
       fetchBatches();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to cancel session');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle Delete Batch
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!confirm('Are you sure you want to delete this batch directory? This action is irreversible.')) return;
+    setActionLoading(batchId);
+
+    try {
+      const res = await fetch(`/api/admin/Batches/${batchId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to delete batch');
+      }
+
+      fetchBatches();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setActionLoading(null);
     }
@@ -1899,33 +1922,44 @@ export default function AdminDashboard() {
                           <div className="flex items-center justify-center py-4">
                             <span className="spinner border-indigo-600 border-t-transparent" />
                           </div>
-                        ) : batch.isLive ? (
-                          <>
-                            <button
-                              onClick={() => handleToggleLive(batch.id, true)}
-                              className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition active:scale-95 shadow-sm"
-                            >
-                              <VideoOff className="w-4 h-4 text-rose-400" />
-                              End Live Session
-                            </button>
-                            
-                            <Link
-                              href={`/classroom?room=${batch.liveRoomId}&role=instructor&username=Instructor`}
-                              target="_blank"
-                              className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-xs shadow-lg shadow-rose-100 hover:shadow-rose-200 transition hover:-translate-y-0.5"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              Join Live Stage
-                            </Link>
-                          </>
                         ) : (
-                          <button
-                            onClick={() => handleToggleLive(batch.id, false)}
-                            className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-100 transition hover:-translate-y-0.5 active:scale-95"
-                          >
-                            <Video className="w-4 h-4" />
-                            Go Live (Start Stream)
-                          </button>
+                          <>
+                            {batch.isLive ? (
+                              <>
+                                <button
+                                  onClick={() => handleToggleLive(batch.id, true)}
+                                  className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition active:scale-95 shadow-sm"
+                                >
+                                  <VideoOff className="w-4 h-4 text-rose-400" />
+                                  End Live Session
+                                </button>
+                                
+                                <Link
+                                  href={`/classroom?room=${batch.liveRoomId}&role=instructor&username=Instructor`}
+                                  target="_blank"
+                                  className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-xs shadow-lg shadow-rose-100 hover:shadow-rose-200 transition hover:-translate-y-0.5"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  Join Live Stage
+                                </Link>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleToggleLive(batch.id, false)}
+                                className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-100 transition hover:-translate-y-0.5 active:scale-95"
+                              >
+                                <Video className="w-4 h-4" />
+                                Go Live (Start Stream)
+                              </button>
+                            )}
+                            
+                            <button
+                              onClick={() => handleDeleteBatch(batch.id)}
+                              className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border border-red-200 hover:bg-red-50 text-red-600 font-bold text-xs transition active:scale-95 mt-1"
+                            >
+                              Delete Batch Directory
+                            </button>
+                          </>
                         )}
                       </div>
 
